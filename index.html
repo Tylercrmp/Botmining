@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BC Miner</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            color: #fff;
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+        .container {
+            max-width: 400px;
+            width: 90%;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+        }
+        h1 {
+            color: #00ff88;
+            margin-bottom: 30px;
+            font-size: 24px;
+        }
+        .balance {
+            font-size: 28px;
+            margin: 20px 0;
+            color: #00ff88;
+        }
+        .mine-btn {
+            background: linear-gradient(45deg, #00ff88, #00b8ff);
+            border: none;
+            color: #fff;
+            padding: 15px 30px;
+            font-size: 18px;
+            border-radius: 50px;
+            cursor: pointer;
+            margin: 20px 0;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(0, 255, 136, 0.3);
+        }
+        .mine-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 20px rgba(0, 255, 136, 0.4);
+        }
+        .mine-btn:active {
+            transform: scale(0.98);
+        }
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            width: 100%;
+            margin-top: 20px;
+        }
+        .stat-box {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 10px;
+            border-radius: 10px;
+            width: 45%;
+        }
+        .upgrades {
+            margin-top: 30px;
+            width: 100%;
+        }
+        .upgrade-btn {
+            background: rgba(0, 255, 136, 0.1);
+            border: 1px solid #00ff88;
+            color: #fff;
+            padding: 10px;
+            border-radius: 8px;
+            margin: 5px 0;
+            width: 100%;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .upgrade-btn:hover {
+            background: rgba(0, 255, 136, 0.2);
+        }
+        .power {
+            width: 100%;
+            height: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+            margin: 20px 0;
+            overflow: hidden;
+        }
+        .power-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #00ff88, #00b8ff);
+            border-radius: 5px;
+            transition: width 0.5s;
+        }
+        .notification {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 255, 136, 0.9);
+            color: #000;
+            padding: 10px 20px;
+            border-radius: 5px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+    </style>
+</head>
+<body>
+    <div class="notification" id="notification">+1 BC</div>
+    <div class="container">
+        <h1>BC Miner</h1>
+        
+        <div class="power">
+            <div class="power-bar" id="powerBar"></div>
+        </div>
+        
+        <button class="mine-btn" id="mineBtn">Майнить BC</button>
+        
+        <div class="balance">
+            <span id="balance">0</span> BC
+        </div>
+        
+        <div class="stats">
+            <div class="stat-box">
+                <div>Мощность</div>
+                <div id="power">1 BC/клик</div>
+            </div>
+            <div class="stat-box">
+                <div>Всего добыто</div>
+                <div id="totalMined">0 BC</div>
+            </div>
+        </div>
+        
+        <div class="upgrades">
+            <h3>Улучшения</h3>
+            <button class="upgrade-btn" id="upgrade1">
+                Улучшить мощность (10 BC) +1 BC/клик
+            </button>
+            <button class="upgrade-btn" id="upgrade2">
+                Автомайнинг (50 BC) 1 BC/сек
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Сохранение данных в localStorage
+        let balance = localStorage.getItem('balance') ? parseInt(localStorage.getItem('balance')) : 0;
+        let totalMined = localStorage.getItem('totalMined') ? parseInt(localStorage.getItem('totalMined')) : 0;
+        let power = localStorage.getItem('power') ? parseInt(localStorage.getItem('power')) : 1;
+        let autoMiner = localStorage.getItem('autoMiner') ? parseInt(localStorage.getItem('autoMiner')) : 0;
+        let autoMinerInterval;
+        
+        const balanceEl = document.getElementById('balance');
+        const totalMinedEl = document.getElementById('totalMined');
+        const powerEl = document.getElementById('power');
+        const mineBtn = document.getElementById('mineBtn');
+        const powerBar = document.getElementById('powerBar');
+        const notification = document.getElementById('notification');
+        const upgrade1Btn = document.getElementById('upgrade1');
+        const upgrade2Btn = document.getElementById('upgrade2');
+        
+        // Функция майнинга
+        function mine() {
+            balance += power;
+            totalMined += power;
+            updateUI();
+            saveData();
+            
+            // Анимация power bar
+            powerBar.style.width = '100%';
+            setTimeout(() => {
+                powerBar.style.width = '0%';
+            }, 300);
+            
+            // Показать уведомление
+            showNotification(`+${power} BC`);
+        }
+        
+        // Функция обновления интерфейса
+        function updateUI() {
+            balanceEl.textContent = balance;
+            totalMinedEl.textContent = totalMined;
+            powerEl.textContent = `${power} BC/клик`;
+            
+            // Проверка доступности улучшений
+            upgrade1Btn.disabled = balance < 10;
+            upgrade2Btn.disabled = balance < 50;
+        }
+        
+        // Функция показа уведомления
+        function showNotification(text) {
+            notification.textContent = text;
+            notification.style.opacity = '1';
+            setTimeout(() => {
+                notification.style.opacity = '0';
+            }, 1000);
+        }
+        
+        // Функция автодобычи
+        function startAutoMiner() {
+            if (autoMiner > 0 && !autoMinerInterval) {
+                autoMinerInterval = setInterval(() => {
+                    balance += autoMiner;
+                    totalMined += autoMiner;
+                    updateUI();
+                    saveData();
+                    showNotification(`+${autoMiner} BC (авто)`);
+                }, 1000);
+            }
+        }
+        
+        // Сохранение данных
+        function saveData() {
+            localStorage.setItem('balance', balance);
+            localStorage.setItem('totalMined', totalMined);
+            localStorage.setItem('power', power);
+            localStorage.setItem('autoMiner', autoMiner);
+        }
+        
+        // Обработчики событий
+        mineBtn.addEventListener('click', mine);
+        
+        upgrade1Btn.addEventListener('click', () => {
+            if (balance >= 10) {
+                balance -= 10;
+                power += 1;
+                updateUI();
+                saveData();
+                showNotification('Мощность увеличена!');
+            }
+        });
+        
+        upgrade2Btn.addEventListener('click', () => {
+            if (balance >= 50) {
+                balance -= 50;
+                autoMiner += 1;
+                updateUI();
+                saveData();
+                showNotification('Автомайнинг активирован!');
+                startAutoMiner();
+            }
+        });
+        
+        // Инициализация
+        updateUI();
+        startAutoMiner();
+    </script>
+</body>
+</html>
